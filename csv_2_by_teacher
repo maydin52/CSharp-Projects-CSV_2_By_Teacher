@@ -1,0 +1,231 @@
+
+// Yapılan tüm değişiklik programdan çıkılırken csv dosyasına kaydediliyor.
+// Bu uygulamada bir öncekinde olmayan güncelle ve sil de eklendi.
+
+//----------------------------------------------------------------------------------------------------------------------
+
+internal class CsvDosyaIslemleri
+    {
+        private string dosyaAdi = "data.csv";
+
+        public CsvDosyaIslemleri()
+        {
+            StreamWriter sw = new StreamWriter(dosyaAdi,true);
+            sw.Close();
+        }
+
+        public void DosyayaEkle(Urun urun)
+        {
+            StreamWriter sw = new StreamWriter(dosyaAdi, true);
+            sw.WriteLine(CSVyeCevir(urun));
+            sw.Close();
+        }
+
+        public void DosyayaYaz(ArrayList urunler)
+        {
+            StreamWriter sw = new StreamWriter(dosyaAdi);
+            foreach(Urun urun in urunler) 
+            {
+                sw.WriteLine(CSVyeCevir(urun));
+            }
+           
+            sw.Close();
+        }
+
+        public ArrayList DosyadanOku()
+        {
+            StreamReader sr = new StreamReader(dosyaAdi);
+            ArrayList _urunler = new ArrayList();
+            
+            while(!sr.EndOfStream)
+            {
+                _urunler.Add(CSVdenUruneCevir(sr.ReadLine()));
+
+            }
+
+            sr.Close();
+            return _urunler;
+        }
+
+        private string CSVyeCevir(Urun urun)
+        {
+            return $"{urun.UrunID};{urun.UrunAdi};{urun.Fiyat};{urun.Kategori}";  
+        }
+        private Urun CSVdenUruneCevir(string strUrun)
+        {
+            Urun urun = new Urun();
+            string[] data = strUrun.Split(";");
+            urun.UrunID = int.Parse(data[0]);
+            urun.UrunAdi = data[1];
+            urun.Fiyat = double.Parse(data[2]);
+            urun.Kategori = data[3];
+
+            return urun;
+           
+        }
+    }
+
+//----------------------------------------------------------------------------------------------------------------------
+
+internal class Urun
+    {
+        public int UrunID { get; set; }
+        public string UrunAdi { get; set; }
+        public double Fiyat  { get; set; }
+        public string Kategori { get; set; }
+    }
+
+//----------------------------------------------------------------------------------------------------------------------
+
+internal class UrunYonetici
+    {
+        ArrayList _urunler = new ArrayList();
+
+        public ArrayList Urunler {
+            get {
+                return _urunler;
+            }
+            set {
+                _urunler = value;
+            } 
+        }
+
+        public void Ekle(Urun urun)
+        { 
+           _urunler.Add(urun);
+        }
+
+        public ArrayList Listele()
+        {
+            return _urunler;
+        }
+
+        public void Guncelle(Urun urun) {
+            Urun _urun = UrunBul(urun.UrunID);
+            if (_urun != null)
+            {
+                _urunler.Remove(_urun);
+                _urunler.Add(urun);
+            }
+        }
+
+        public Urun UrunBul(int id)
+        { 
+           foreach(Urun urun in _urunler) 
+            {
+               if(urun.UrunID == id)
+                    return urun;
+            }
+            return null;
+        }
+
+        public void Sil(int id)
+        {
+            Urun urun = UrunBul(id);
+            if(urun != null)
+               _urunler.Remove(urun); 
+        }
+    }
+
+//----------------------------------------------------------------------------------------------------------------------
+
+public partial class Form1 : Form
+    {
+        public Form1()
+        {
+            InitializeComponent();
+        }
+
+        CsvDosyaIslemleri csv = new CsvDosyaIslemleri();
+        UrunYonetici urunYonetici = new UrunYonetici();
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+            urunYonetici.Urunler = csv.DosyadanOku();
+            gridYenile();
+        }
+
+        private void Form1_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            csv.DosyayaYaz(urunYonetici.Urunler);
+        }
+
+        private void btnEkle_Click(object sender, EventArgs e)
+        {
+            Urun urun= urunYonetici.UrunBul(int.Parse(txtUrunID.Text));
+            if (urun != null)
+                MessageBox.Show("Bu ID ile başka bir kayıt var!!!");
+            else
+            {
+                urunYonetici.Ekle(UruneCevir());
+                gridYenile();
+            }
+        }
+
+        private Urun UruneCevir()
+        {
+            Urun urun = new Urun();
+            urun.UrunID = int.Parse(txtUrunID.Text);
+            urun.UrunAdi = txtUrunAdi.Text;
+            urun.Fiyat = double.Parse(txtFiyat.Text);
+            urun.Kategori = txtKategori.Text;
+            return urun;
+        }
+
+        private void UrunlerdenAktar(Urun urun)
+        {
+            //urun.UrunID = int.Parse(txtUrunID.Text);
+            txtUrunAdi.Text = urun.UrunAdi;
+            txtFiyat.Text = urun.Fiyat.ToString();
+            txtKategori.Text = urun.Kategori;
+        }
+
+        private void gridYenile()
+        {
+            grdUrunler.DataSource = "";
+            grdUrunler.DataSource = urunYonetici.Urunler;
+
+        }
+
+        private void btnAra_Click(object sender, EventArgs e)
+        {
+            Urun urun = urunYonetici.UrunBul(int.Parse(txtUrunID.Text));
+            if (urun != null)
+            {
+                UrunlerdenAktar(urun);
+                AktifPasif(true);
+            }
+            else
+                MessageBox.Show("Aradığınız kayıt bulunamadi...");
+        }
+
+        private void AktifPasif(bool aktif)
+        {
+            //btnEkle.Visible = !aktif;
+            //panel1.Visible = aktif;
+            btnEkle.Enabled = !aktif;
+            panel1.Enabled = aktif;
+        }
+
+        private void btnGuncelle_Click(object sender, EventArgs e)
+        {
+            urunYonetici.Guncelle(UruneCevir());
+            gridYenile();
+            AktifPasif(false);
+        }
+
+        private void btnSil_Click(object sender, EventArgs e)
+        {
+            DialogResult dr = MessageBox.Show("Emin misiniz?", "UYARI", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+
+            if (dr == DialogResult.Yes)
+            {
+                urunYonetici.Sil(int.Parse(txtUrunID.Text));
+                gridYenile();
+                AktifPasif(false);
+            }
+        }
+    }
+
+//----------------------------------------------------------------------------------------------------------------------
+
